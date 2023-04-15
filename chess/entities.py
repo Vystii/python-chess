@@ -158,7 +158,7 @@ class Piece(ABC):
 
     
     
-class king(Piece):
+class King(Piece):
     def __init__(self, position: Position = Position(1, 1, True), state: bool = True):
         super().__init__(position, state)
     
@@ -379,7 +379,9 @@ class Chess:
         #set current turn (white or black)
         self.turn:Color = currentTurn
         #creating the pieces(dict of list)
-        self.pieces:dict[str, list] = dict()
+        self.pieces:dict[str, list[Piece]] = dict()
+        #point on boot kings
+        self.kings:dict[Color, King] = dict()
         #creating the board (dict of list 8*8)
         self.board:dict[str, list] = dict()
         for i in range(CHESS_SIZE):
@@ -387,21 +389,52 @@ class Chess:
             self.board[COLUMN[i]] = [Position(i, j) for j in range(CHESS_SIZE)]
         #init pieces. if whitePieces not defined then all pices are set by default
         if not whitePieces:
-            colorLine= 0
-            colorLine:list[int] = [1, 6]
             for color in Color:
                 #creating pawns
+                line = 1 if color == Color.WHITE else 6
                 for i in range(8):
-                    line  = colorLine[colorLine]
                     position:Position = self.board[COLUMN[i]][line]
                     self.pieces[color.name].append(Pawn(color = color, position = position))
+                    
+                #creating Rooks
+                colPosition = [0, 7]
+                line = 0 if color == Color.WHITE else 7
+                for i in range(2):
+                    position:Position = self.board[COLUMN[colPosition[i]]][line]
+                    self.pieces[color.name].append(Rook(color, position = position))
+                
+                #creating Knights
+                colPosition = [1, 6]
+                for i in range(2):
+                    position:Position = self.board[COLUMN[colPosition[i]]][line]
+                    self.pieces[color.name].append(Knight(color, position = position))
+                
+                #creating Bishops
+                colPosition = [2, 5]
+                for i in range(2):
+                    position:Position = self.board[COLUMN[colPosition[i]]][line]
+                    self.pieces[color.name].append(Bishop(color, position = position))
+                
+                #creating Queens
+                position:Position = self.board[COLUMN[3]][line]
+                self.pieces[color.name].append(Queen(color, position = position))
+                
+                #creating Kings
+                position:Position = self.board[COLUMN[4]][line]
+                self.kings[color] = King(color, position = position)
+                self.pieces[color.name].append(self.kings[color])
+
         else:
             self.pieces[Color.WHITE] = whitePieces
             self.pieces[Color.BLACK] = blackPieces
     
     def isKingThreatened(self)->bool:
-        # king = pieces[self.turn][]
         opponentColor = Color.WHITE if self.turn == Color.BLACK else Color.WHITE
-        for pieces in self.pieces.values: # type : Piece
-            for piece in pieces:
-                pass
+        pieces:list[Piece] = self.pieces[opponentColor]
+        threat = False
+        for piece in pieces:
+            moves = piece.getMoveList()
+            if self.kings[self.turn].position in moves:
+                threat = True
+                break
+        return threat
