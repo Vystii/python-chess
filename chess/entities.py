@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-import chess.entities as _
+# from entities import Piece, Position
+import pygame
+
 
 column = "a b c d e f g h"
 line = [i+1 for i in range(8)]
@@ -9,11 +11,12 @@ CHESS_SIZE = 8
 
 class Color(Enum):
     WHITE = 1
-    BLACK = 1
+    BLACK = 2
     
 class Position:
+    image:pygame.image
     _registries = list()
-    def __init__(self, line:int, column:int, isFree:bool = True):
+    def __init__(self, line:int, column:int, isFree:bool = True, piece = None):
         """Create a case
 
         Args:
@@ -21,8 +24,9 @@ class Position:
             column (int): column of the case
             isFree (bool, optional): state of the case (if it's occupied or not) Defaults to True.
         """
-        line -= 1
-        column -= 1
+        # line -= 1
+        # column -= 1
+        self.piece:Piece = piece
         error_message = "invalid value"
         if line  > 7 or line < 0:
             raise TypeError("line " + error_message)
@@ -36,6 +40,9 @@ class Position:
     
     def __eq__(self, other) -> bool:
         return self.column == other.column and self.line == other.line
+    
+    def __str__(self):
+        return f"{self.line}, {COLUMN[self.column]}"
     
     def isFree(self)->bool:
         """State of a position (free or not)
@@ -72,12 +79,15 @@ class Position:
         return False
 
 class Piece(ABC):
+    def __str__(self):
+        return self.__class__.__name__
+    image:pygame.image
     _registry = {
         "white": [],
         "black": []
     }
     
-    def __init__(self, color:Color, position:Position = Position(1, 1, True), state:bool = True):
+    def __init__(self, color:Color, position:Position = Position(0, 0, True), state:bool = True):
         """initialize a piece
 
         Args:
@@ -91,8 +101,10 @@ class Piece(ABC):
         if not position.isFree():
             raise TypeError(f"position not available")
         self.state :bool = True
-        self.position :Position = position()
+        self.position :Position = position
         self.color: Color = color
+        self.position.free = False
+        self.position.piece:Piece = self
         if color == Color.BLACK:
             self._registry['black'].append(self)
         else:
@@ -105,7 +117,7 @@ class Piece(ABC):
         return self._registry['white']
     
     @classmethod
-    def getColorPieceList(cls, color: Color)->list[_.Piece]:
+    def getColorPieceList(cls, color: Color)->list:
         """return all the living pieces of a given color
 
 
@@ -113,7 +125,7 @@ class Piece(ABC):
             color (Color): the color of the pieces you want
 
         Returns:
-            list[_.Piece]: list of pieces
+            list[Piece]: list of pieces
         """
         strColor = "white" if color == Color.WHITE else Color.BLACK
         return  [element for element in cls._registry[strColor] if element.isAlive()]
@@ -156,11 +168,9 @@ class Piece(ABC):
         """
         pass
 
-    
-    
 class King(Piece):
-    def __init__(self, position: Position = Position(1, 1, True), state: bool = True):
-        super().__init__(position, state)
+    def __init__(self, color: Color, position: Position = Position(0, 0, True), state: bool = True):
+        super().__init__(color, position, state)
     
     def getMoveList(self, board: dict[str, list[Position]]) -> list:
         datas :list = list()
@@ -189,15 +199,16 @@ class King(Piece):
                 positions[2].append((COLUMN[pieceColumn - 1], pieceLine - 1))
             if pieceLine - 1 < CHESS_SIZE:
                 positions[2].append((COLUMN[pieceColumn - 1], pieceLine + 1))
-
+        print(positions)
         for axe in positions:
             for coordonnates in axe:
-                position = board[coordonnates[0]][coordonnates[1]]
+                position:Position= board[coordonnates[0]][coordonnates[1]]
                 if position.isFree():
                     datas.append(position)
                 else:
+                    if  not position.piece.color == self.color:
+                        datas.append(position)
                     break
-        
         return datas
 
 class Rook(Piece):
@@ -211,9 +222,9 @@ class Rook(Piece):
         #creating coordonnate to check  
         positions = list()
         positions.append([(COLUMN[pieceColumn], i) for i in range(pieceLine-1, -1, -1)])
-        positions.append([(COLUMN[pieceColumn], i) for i in range(pieceLine+1, +1, CHESS_SIZE)])
+        positions.append([(COLUMN[pieceColumn], i) for i in range(pieceLine+1, CHESS_SIZE, +1)])
         positions.append([(COLUMN[i], pieceLine) for i in range(pieceColumn-1, -1, -1)])
-        positions.append([(COLUMN[i], pieceLine) for i in range(pieceColumn+1, +1, CHESS_SIZE)])
+        positions.append([(COLUMN[i], pieceLine) for i in range(pieceColumn+1, CHESS_SIZE, +1)])
         #check coordonnate
         for axe in positions:
             for coordonnates in axe:
@@ -221,6 +232,8 @@ class Rook(Piece):
                 if position.isFree():
                     datas.append(position)
                 else:
+                    if not position.piece.color == self.color:
+                        datas.append(position) 
                     break
         return datas
 
@@ -236,20 +249,21 @@ class Bishop(Piece):
         positions:list = list()
         lower = min(pieceLine, pieceColumn)
         upper = max(pieceLine, pieceColumn)
-        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine + i + 1) for i in range(CHESS_SIZE - upper)])
-        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine - i - 1) for i in range(lower)])
+        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine + i + 1) for i in range(CHESS_SIZE - upper) if pieceColumn + i + 1 < CHESS_SIZE and pieceLine + i + 1 < CHESS_SIZE])
+        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine - i - 1) for i in range(lower) if pieceColumn - i - 1 < CHESS_SIZE and pieceLine - i - 1 < CHESS_SIZE])
         lower = min(pieceLine, CHESS_SIZE-pieceColumn)
-        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine - i - 1) for i in range(lower)])
-        lower = (CHESS_SIZE - pieceLine, pieceColumn)
-        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine + i + 1) for i in range(lower)])
-        
+        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine - i - 1) for i in range(lower) if pieceColumn + i + 1 < CHESS_SIZE and pieceLine - i - 1 < CHESS_SIZE])
+        lower = min(CHESS_SIZE - pieceLine, pieceColumn)
+        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine + i + 1) for i in range(lower) if pieceColumn - i - 1 < CHESS_SIZE and pieceLine + i + 1 < CHESS_SIZE])
         #check coordonnate
         for axe in positions:
             for coordonnates in axe:
-                position = board[coordonnates[0]][coordonnates[1]]
+                position:Position = board[coordonnates[0]][coordonnates[1]]
                 if position.isFree():
                     datas.append(position)
                 else:
+                    if not position.piece.color == self.color:
+                        datas.append(position)
                     break
         return datas
 
@@ -262,46 +276,47 @@ class Knight(Piece):
         pieceLine = self.position.line
         pieceColumn = self.position.column
         positions:list = list()
+        indice = len(positions) - 1
         if pieceLine < CHESS_SIZE - 2:
             positions.append([])
             if pieceColumn < CHESS_SIZE - 1:
-                positions[0].append((COLUMN[pieceColumn + 1][pieceLine + 2]))
+                positions[indice].append((COLUMN[pieceColumn + 1],pieceLine + 2))
             if pieceColumn:
-                positions[0].append((COLUMN[pieceColumn - 1][pieceLine + 2]))
+                positions[indice].append((COLUMN[pieceColumn - 1], pieceLine + 2))
+        indice = len(positions) - 1
         if pieceLine > 1:
             positions.append([])
             if pieceColumn < CHESS_SIZE - 1:
-                positions[1].append((COLUMN[pieceColumn + 1][pieceLine - 2]))
+                positions[indice].append((COLUMN[pieceColumn + 1], pieceLine - 2))
             if pieceColumn:
-                positions[1].append((COLUMN[pieceColumn - 1][pieceLine - 2]))
-
+                positions[indice].append((COLUMN[pieceColumn - 1], pieceLine - 2))
+        indice = len(positions) - 1
         if pieceColumn < CHESS_SIZE - 2:
             positions.append([])
             if pieceLine < CHESS_SIZE - 1:
-                positions[2].append((COLUMN[pieceColumn + 2][pieceLine + 1 ]))
+                positions[indice].append((COLUMN[pieceColumn + 2], pieceLine + 1 ))
             if pieceLine:
-                positions[2].append((COLUMN[pieceColumn + 2][pieceLine - 1]))
+                positions[indice].append((COLUMN[pieceColumn + 2], pieceLine - 1))
+        indice = len(positions) - 1
         if pieceColumn > 1:
             positions.append([])
             if pieceLine < CHESS_SIZE - 1:
-                positions[3].append((COLUMN[pieceColumn - 2][pieceLine + 1]))
+                positions[indice].append((COLUMN[pieceColumn - 2], pieceLine + 1))
             if pieceLine:
-                positions[3].append((COLUMN[pieceColumn - 2][pieceLine - 1]))
+                positions[indice].append((COLUMN[pieceColumn - 2], pieceLine - 1))
 
         #check coordonnate
         for axe in positions:
             for coordonnates in axe:
-                position = board[coordonnates[0]][coordonnates[1]]
-                if position.isFree():
+                position:Position= board[coordonnates[0]][coordonnates[1]]
+                if position.isFree() or not position.piece.color == self.color:
                     datas.append(position)
-                else:
-                    break
         
         return datas
 
 class Queen(Piece):
     def __init__(self, color: Color, position: Position = Position(1, 1, True), state: bool = True):
-        super().__init__(color, position, state)
+        super().__init__(color, position = position, state = state)
         
     def getMoveList(self, board: dict[str, list[Position]]) -> list:
         datas:list = list()
@@ -310,34 +325,35 @@ class Queen(Piece):
         
          #creating coordonnate to check  
         positions = list()
-        positions.append([(COLUMN[pieceColumn], i) for i in range(pieceLine-1, -1, -1)])
-        positions.append([(COLUMN[pieceColumn], i) for i in range(pieceLine+1, +1, CHESS_SIZE)])
-        positions.append([(COLUMN[i], pieceLine) for i in range(pieceColumn-1, -1, -1)])
-        positions.append([(COLUMN[i], pieceLine) for i in range(pieceColumn+1, +1, CHESS_SIZE)])
-        
         lower = min(pieceLine, pieceColumn)
         upper = max(pieceLine, pieceColumn)
-        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine + i + 1) for i in range(CHESS_SIZE - upper)])
-        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine - i - 1) for i in range(lower)])
+        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine + i + 1) for i in range(CHESS_SIZE - upper) if pieceColumn + i + 1 < CHESS_SIZE and pieceLine + i + 1 < CHESS_SIZE])
+        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine - i - 1) for i in range(lower) if pieceColumn - i - 1 < CHESS_SIZE and pieceLine - i - 1 < CHESS_SIZE])
         lower = min(pieceLine, CHESS_SIZE-pieceColumn)
-        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine - i - 1) for i in range(lower)])
-        lower = (CHESS_SIZE - pieceLine, pieceColumn)
-        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine + i + 1) for i in range(lower)])
+        positions.append([(COLUMN[pieceColumn + i + 1], pieceLine - i - 1) for i in range(lower) if pieceColumn + i + 1 < CHESS_SIZE and pieceLine - i - 1 < CHESS_SIZE])
+        lower = min(CHESS_SIZE - pieceLine, pieceColumn)
+        positions.append([(COLUMN[pieceColumn - i - 1], pieceLine + i + 1) for i in range(lower) if pieceColumn - i - 1 < CHESS_SIZE and pieceLine + i + 1 < CHESS_SIZE])
         
+        positions.append([(COLUMN[pieceColumn], i) for i in range(pieceLine-1, -1, -1)])
+        positions.append([(COLUMN[pieceColumn], i) for i in range(pieceLine+1, CHESS_SIZE, +1)])
+        positions.append([(COLUMN[i], pieceLine) for i in range(pieceColumn-1, -1, -1)])
+        positions.append([(COLUMN[i], pieceLine) for i in range(pieceColumn+1, CHESS_SIZE, +1)])
         #check coordonnate
         for axe in positions:
             for coordonnates in axe:
-                position = board[coordonnates[0]][coordonnates[1]]
+                position:Position = board[coordonnates[0]][coordonnates[1]]
                 if position.isFree():
                     datas.append(position)
                 else:
+                    if not position.piece.color == self.color:
+                        datas.append(position)
                     break
         return datas
 
 class Pawn(Piece):
-    def __init__(self, position: Position = Position(1, 1, True), state: bool = True, moved:bool = False):
+    def __init__(self, color: Color, position: Position = Position(0, 0, True), state: bool = True, moved: bool = False):
         self.moved = moved
-        super().__init__(position, state)
+        super().__init__(color, position, state)
     
     def move(self)->None:
         self.moved = False
@@ -347,20 +363,23 @@ class Pawn(Piece):
         datas :list = list()
         pieceLine = self.position.line
         pieceColumn = self.position.column
-        
-        position = board[COLUMN[pieceColumn]][pieceLine + 1]
+        direction = 1 if self.color == Color.WHITE else -1
+        #the box right in front of the pawn
+        position:Position = board[COLUMN[pieceColumn]][pieceLine + direction]
         if position.isFree():
             datas.append(position)
+        
+        
         if pieceColumn:
-            position = board[COLUMN[pieceColumn - 1]][pieceLine + 1]
+            position = board[COLUMN[pieceColumn - 1]][pieceLine + direction]
             if not position.isFree():
                 datas.append(position)
-        if pieceColumn - 1 < CHESS_SIZE:
-            position = board[COLUMN[pieceColumn + 1]][pieceLine + 1]
+        if pieceColumn + 1 < CHESS_SIZE:
+            position = board[COLUMN[pieceColumn + 1]][pieceLine + direction]
             if not position.isFree():
                 datas.append(position)
         if not self.moved:
-            position = board[COLUMN[pieceColumn]][pieceLine + 2]
+            position = board[COLUMN[pieceColumn]][pieceLine + 2*direction]
             if position.isFree():
                 datas.append(position)
         return datas
@@ -386,38 +405,44 @@ class Chess:
         self.board:dict[str, list] = dict()
         for i in range(CHESS_SIZE):
             self.board[COLUMN[i]] = list()
-            self.board[COLUMN[i]] = [Position(i, j) for j in range(CHESS_SIZE)]
+            self.board[COLUMN[i]] = [Position(column=i, line=j) for j in range(CHESS_SIZE)]
         #init pieces. if whitePieces not defined then all pices are set by default
         if not whitePieces:
             for color in Color:
+                self.pieces[color.name] = list()
                 #creating pawns
                 line = 1 if color == Color.WHITE else 6
                 for i in range(8):
                     position:Position = self.board[COLUMN[i]][line]
-                    self.pieces[color.name].append(Pawn(color = color, position = position))
+                    pawn = Pawn(color = color, position = position)
+                    self.pieces[color.name].append(pawn)
                     
                 #creating Rooks
                 colPosition = [0, 7]
                 line = 0 if color == Color.WHITE else 7
                 for i in range(2):
                     position:Position = self.board[COLUMN[colPosition[i]]][line]
-                    self.pieces[color.name].append(Rook(color, position = position))
+                    rook = Rook(color = color, position = position)
+                    self.pieces[color.name].append(rook)
                 
                 #creating Knights
                 colPosition = [1, 6]
                 for i in range(2):
                     position:Position = self.board[COLUMN[colPosition[i]]][line]
-                    self.pieces[color.name].append(Knight(color, position = position))
+                    knight = Knight(color = color, position = position )
+                    self.pieces[color.name].append(knight)
                 
                 #creating Bishops
                 colPosition = [2, 5]
                 for i in range(2):
                     position:Position = self.board[COLUMN[colPosition[i]]][line]
-                    self.pieces[color.name].append(Bishop(color, position = position))
-                
+                    bishop = Bishop(color = color, position =  position)
+                    self.pieces[color.name].append(bishop)
                 #creating Queens
                 position:Position = self.board[COLUMN[3]][line]
-                self.pieces[color.name].append(Queen(color, position = position))
+                queen = Queen(color = color, position = position)
+                queen.position.free = False
+                self.pieces[color.name].append(queen)
                 
                 #creating Kings
                 position:Position = self.board[COLUMN[4]][line]
