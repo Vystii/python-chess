@@ -1,4 +1,6 @@
-from entities import Chess, Position, Piece
+from entities import Position, Piece, CHESS_SIZE, COLUMN
+from chess import Chess
+import pygame
 
 # vars definitions
 TITLE = "CHESS by Vysti"
@@ -18,13 +20,13 @@ PIECE_LEN = BOX_LEN - BOX_PADDING
 IMAGE_SIZE = 128
 SCALE = PIECE_LEN / IMAGE_SIZE
 
-IMG_LOC = "sprites/JohnPablok_Cburnett_Chess_set/PNGs/128h"
+IMG_LOC = "../sprites/JohnPablok_Cburnett_Chess_set/PNGs/128h"
 
 
 # Useful function
 def getCaseIndex(
-    position: tuple[int], board: dict[str, list[Position]]
-) -> tuple(str, int):
+    position: tuple[int, int], board: dict[str, list[Position]]
+) -> tuple[str, int]:
     """function to get indexes of the box that have been clicked on
 
     Args:
@@ -38,12 +40,39 @@ def getCaseIndex(
     """
     if (
         BOARD_X + BOARD_PADDING / 2 > position[0]
-        or BOARD_X - BOARD_PADDING / 2 < position[0]
+        or BOARD_X + BOARD_W - BOARD_PADDING / 2 < position[0]
         or BOARD_Y + BOARD_PADDING / 2 > position[1]
-        or BOARD_Y - BOARD_PADDING < position[1]
+        or BOARD_Y + BOARD_H - BOARD_PADDING < position[1]
     ):
         return None
     column_keys = [key for key in board.keys()]
-    column_index = (position[0] - BOARD_X - BOARD_PADDING) // len(column_keys)
-    line_index = (position[1] - BOARD_Y - BOARD_PADDING) // len(column_keys)
-    return (column_index, line_index)
+    column_index = (position[0] - BOARD_X - BOARD_PADDING) // BOX_LEN
+    line_index = (position[1] - BOARD_Y - BOARD_PADDING) // BOX_LEN
+    return (COLUMN[int(column_index)], CHESS_SIZE - 1 - int(line_index))
+
+
+def blit_piece(piece: Piece, screen: pygame.Surface) -> None:
+    line = piece.position.line
+    column = piece.position.column
+    position_x = int(BOARD_X + BOARD_PADDING / 2 + column * BOX_LEN + BOX_PADDING / 2)
+    position_y = int(BOARD_Y + BOARD_PADDING / 2 + line * BOX_LEN + BOX_PADDING / 2)
+    screen.blit(
+        pieces_images[color][piece.__class__.__name__], (position_x, position_y)
+    )
+
+
+def blit_box(
+    position: Position, boxColor: tuple[int, int, int], screen: pygame.Surface
+) -> None:
+    position_x = int(BOARD_X + BOARD_PADDING / 2 + position.column * BOX_LEN)
+    position_y = int(BOARD_Y + BOARD_PADDING / 2 + position.line * BOX_LEN)
+    box_rect = position_x, position_y, BOX_LEN, BOX_LEN
+    pygame.draw.rect(screen, boxColor, box_rect)
+
+
+# functions definitions
+def printBoard(board: dict[str, list]) -> None:
+    for i in range(8):
+        for column in board.values():
+            print(f"{column[i].piece}\t", end=" ")
+        print("")

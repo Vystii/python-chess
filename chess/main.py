@@ -4,7 +4,12 @@ from entities import *
 from display_tools import *
 from pygame.locals import *
 from entities import Color as entities_color
+from chess import Chess
+from piece import *
 
+
+chess = Chess()
+printBoard(chess.board)
 
 pygame.display.set_caption(TITLE)
 screen = pygame.display.set_mode(SCREEN)
@@ -65,22 +70,12 @@ for color in entities_color:
         )
 
 
-# funcitons definitions
-def printBoard(board: dict[str, list]) -> None:
-    for i in range(8):
-        for column in board.values():
-            print(f"{column[i].piece}\t", end=" ")
-        print("")
-
-
 # initialisations
+
+
 pygame.init()
 
 running = True
-
-
-chess = Chess()
-printBoard(chess.board)
 
 while running:
     # set the background color
@@ -91,11 +86,14 @@ while running:
     # display the game
     for i in range(len(COLUMN)):
         for j in range(CHESS_SIZE):
-            box_color = LIGHT_BOX_BG if not (i + j) % 2 else DARK_BOX_BG
-            position_x = int(BOARD_X + BOARD_PADDING / 2 + i * BOX_LEN)
-            position_y = int(BOARD_Y + BOARD_PADDING / 2 + j * BOX_LEN)
-            box_rect = position_x, position_y, BOX_LEN, BOX_LEN
-            pygame.draw.rect(screen, box_color, box_rect)
+            position = chess.board[COLUMN[i]][j]
+            boxColor = LIGHT_BOX_BG if not (i + j) % 2 else DARK_BOX_BG
+            blit_box(position, boxColor, screen)
+
+            # position_x = int(BOARD_X + BOARD_PADDING / 2 + i * BOX_LEN)
+            # position_y = int(BOARD_Y + BOARD_PADDING / 2 + j * BOX_LEN)
+            # box_rect = position_x, position_y, BOX_LEN, BOX_LEN
+            # pygame.draw.rect(screen, box_color, box_rect)
     for color in entities_color:
         for piece in chess.pieces[color.name]:
             line = piece.position.line
@@ -104,7 +102,11 @@ while running:
                 BOARD_X + BOARD_PADDING / 2 + column * BOX_LEN + BOX_PADDING / 2
             )
             position_y = int(
-                BOARD_Y + BOARD_PADDING / 2 + line * BOX_LEN + BOX_PADDING / 2
+                BOARD_H
+                + BOARD_Y
+                - BOARD_PADDING / 2
+                - (line + 1) * BOX_LEN
+                + BOX_PADDING / 2
             )
             screen.blit(
                 pieces_images[color][piece.__class__.__name__], (position_x, position_y)
@@ -115,8 +117,11 @@ while running:
             running = False
         if event.type == MOUSEBUTTONDOWN:
             position = pygame.mouse.get_pos()
+            print(position)
             position = getCaseIndex(position, chess.board)
-            chess.select(position)
+            print(type(chess.board))
+            print(position)
+            chess.selected(position, chess.board)
 
 
 pygame.quit()
