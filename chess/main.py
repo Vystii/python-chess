@@ -9,8 +9,19 @@ from piece import *
 
 
 chess = Chess()
-printBoard(chess.board)
-
+# printBoard(chess.board)
+chess.selected(("e", 1), chess.board)
+chess.selected(("e", 3), chess.board)
+chess.selected(("f", 6), chess.board)
+chess.selected(("f", 4), chess.board)
+chess.selected(("f", 0), chess.board)
+chess.selected(("e", 1), chess.board)
+chess.selected(("g", 6), chess.board)
+chess.selected(("g", 4), chess.board)
+chess.selected(("e", 1), chess.board)
+chess.selected(("h", 4), chess.board)
+gameOver, message = chess.testGameOver()
+# print(f"gameOver = {gameOver}\n{message}")
 pygame.display.set_caption(TITLE)
 screen = pygame.display.set_mode(SCREEN)
 print(BOARD_PADDING)
@@ -122,6 +133,11 @@ while running:
             print(type(chess.board))
             print(position)
             chess.selected(position, chess.board)
+            print(chess.gameOver)
+            if chess.gameOver:
+                print("game over")
+
+                pygame.display.set_caption(chess.message)
 
 
 pygame.quit()

@@ -20,7 +20,7 @@ PIECE_LEN = BOX_LEN - BOX_PADDING
 IMAGE_SIZE = 128
 SCALE = PIECE_LEN / IMAGE_SIZE
 
-IMG_LOC = "../sprites/JohnPablok_Cburnett_Chess_set/PNGs/128h"
+IMG_LOC = "sprites/JohnPablok_Cburnett_Chess_set/PNGs/128h"
 
 
 # Useful function

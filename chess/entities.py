@@ -35,7 +35,7 @@ class Position:
         if line > 7 or line < 0:
             raise TypeError("line " + error_message)
         if column > 7 or column < 0:
-            raise TypeError("line " + error_message)
+            raise TypeError("column " + error_message)
 
         self.line = line
         self.column = column
@@ -111,7 +111,7 @@ class Piece(ABC):
         Raises:
             TypeError: the position of the piece your trying to save is currently occupied
         """
-
+        self.moveCount = 0
         if not position.isFree():
             raise TypeError(f"position not available")
         self.state: bool = True
@@ -119,7 +119,7 @@ class Piece(ABC):
         self.color: Color = color
         self.position.free: bool = False
         self.position.piece: Piece = self
-        self.tempPosition: Position = None
+        self.oldPosition: Position = None
         if color == Color.BLACK:
             self._registry["black"].append(self)
         else:
@@ -167,17 +167,28 @@ class Piece(ABC):
         Returns:
             bool: True if the position was free and False otherwise
         """
+        print(f"new position => {newPosition}")
+
         canGo = self.getMoveList(board)
         if not (newPosition in canGo):
             raise TypeError("this piece can't go to the given position")
+        self.oldPosition = self.position
         self.position.setFree()
         self.position = newPosition
         self.position.setOccupied()
         self.position.piece = self
+        self.moveCount += 1
         return True
 
+    def cancelMove(self) -> None:
+        self.position.setFree()
+        self.position = self.oldPosition
+        self.oldPosition = None
+        self.position.setOccupied()
+        self.moveCount -= 1
+
     @abstractmethod
-    def getMoveList(self, board: dict[str, list[Position]]) -> list:
+    def getMoveList(self, board: dict[str, list[Position]]) -> list[Position]:
         """Get the list of possible move
 
         Returns:

@@ -21,10 +21,10 @@ class King(Piece):
         positions.append([])
         if pieceLine:
             positions[0].append((COLUMN[pieceColumn], pieceLine - 1))
-        if pieceLine - 1 < CHESS_SIZE:
+        if pieceLine + 1 < CHESS_SIZE:
             positions[0].append((COLUMN[pieceColumn], pieceLine + 1))
 
-        if pieceColumn - 1 < CHESS_SIZE:
+        if pieceColumn + 1 < CHESS_SIZE:
             positions.append([(COLUMN[pieceColumn + 1], pieceLine)])
             if pieceLine:
                 positions[1].append((COLUMN[pieceColumn + 1], pieceLine - 1))
@@ -34,7 +34,7 @@ class King(Piece):
             positions.append([(COLUMN[pieceColumn - 1], pieceLine)])
             if pieceLine:
                 positions[2].append((COLUMN[pieceColumn - 1], pieceLine - 1))
-            if pieceLine - 1 < CHESS_SIZE:
+            if pieceLine + 1 < CHESS_SIZE:
                 positions[2].append((COLUMN[pieceColumn - 1], pieceLine + 1))
         print(positions)
         for axe in positions:
@@ -289,8 +289,14 @@ class Pawn(Piece):
         super().__init__(color, position, state)
 
     def move(self, newPosition: Position, board: dict[str, list[Position]]) -> None:
-        self.moved = False
         super().move(newPosition, board)
+        self.moved = True
+
+    def cancelMove(self):
+        print("pawn cancel")
+        if not self.moveCount - 1:
+            self.moved = False
+        super().cancelMove()
 
     def getMoveList(self, board: dict[str, list[Position]]) -> list:
         datas: list = list()
